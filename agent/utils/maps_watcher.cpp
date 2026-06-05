@@ -14,19 +14,14 @@ static std::thread g_thread;
 void maps_watcher_start() {
     if (g_running.load()) return;
     g_running = true;
-
     g_thread = std::thread([]() {
         std::set<std::string> seen_libs;
         int last_pid = -1;
         while (g_running.load()) {
             int pid = get_attached_pid();
-            if (pid != last_pid) {
-                seen_libs.clear();  // PID deðiþince sýfýrla
-                last_pid = pid;
-            }
+            if (pid != last_pid) { seen_libs.clear(); last_pid = pid; }
             if (pid > 0) {
                 std::string maps_path = "/proc/" + std::to_string(pid) + "/maps";
-                fprintf(stderr, "[maps_watcher] scanning pid=%d\n", pid); fflush(stderr);
                 std::ifstream f(maps_path);
                 std::string line;
                 while (std::getline(f, line)) {
@@ -38,15 +33,14 @@ void maps_watcher_start() {
                     if (seen_libs.count(path)) continue;
                     seen_libs.insert(path);
 
-                    // lib adýný çýkar
+                    uint64_t base = 0;
+                    sscanf(line.c_str(), "%lx", &base);
+
                     size_t slash = path.rfind('/');
                     std::string name = (slash != std::string::npos)
                         ? path.substr(slash + 1) : path;
 
-                    // waitForLib callback'lerini tetikle
-                    fprintf(stderr, "[maps_watcher] new lib: %s\n", name.c_str());
-                    fflush(stderr);
-                    js_notify_lib_loaded(name);
+                    js_notify_lib_loaded(name, base, path);
                 }
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -55,6 +49,4 @@ void maps_watcher_start() {
     g_thread.detach();
 }
 
-void maps_watcher_stop() {
-    g_running = false;
-}
+void maps_watcher_stop() { g_running = false; }

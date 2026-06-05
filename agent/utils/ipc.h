@@ -2,6 +2,8 @@
 #include <string>
 #include <cstdint>
 
+static constexpr size_t IPC_PAYLOAD_SIZE = 8192;
+
 enum class IPCMsgType : uint32_t {
     HOOK_BEFORE = 1,
     HOOK_AFTER = 2,
@@ -10,6 +12,14 @@ enum class IPCMsgType : uint32_t {
     HOOK_INSTALL = 5,
     HOOK_REMOVE = 6,
     READY = 7,
+    MODULE_LIST_REQ = 8,
+    MODULE_LIST_RESP = 9,
+    FIND_SYMBOL_REQ = 10,
+    FIND_SYMBOL_RESP = 11,
+    LIB_LOADED_REQ = 12,
+    LIB_LOADED_RESP = 13,
+    FIND_MODULE_REQ = 14,  // Agent → SO: tek lib sorgula
+    FIND_MODULE_RESP = 15,  // SO → Agent: JSON {name,path,base} veya "null"
 };
 
 struct IPCMsg {
@@ -18,9 +28,11 @@ struct IPCMsg {
     uint64_t   args[8];
     uint64_t   ret_val;
     uint64_t   override_val;
-    uint64_t   target_addr;  // hook edilecek adres (agent'ın dlsym sonucu)
+    uint64_t   target_addr;
     char       symbol[128];
     char       lib[128];
+    uint32_t   payload_size;
+    char       payload[IPC_PAYLOAD_SIZE];
 };
 
 // Agent (server)
